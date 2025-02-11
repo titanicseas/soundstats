@@ -15,6 +15,13 @@
       {{ error }}
     </div>
 
+    <!-- Empty state for new accounts -->
+    <div v-else-if="artists.length === 0" class="text-center py-8">
+      <p class="text-neutral-600 dark:text-neutral-400">
+        No listening data available yet. Start listening to music to see your top artists!
+      </p>
+    </div>
+
     <!-- Content -->
     <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       <div v-for="(artist, index) in artists.slice(0, 15)" :key="artist.id"
@@ -63,7 +70,7 @@
     </div>
 
     <!-- Stats cards -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+    <div v-if="artists.length > 0" class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
       <StatCard 
         title="Most Common Genre" 
         :value="mostCommonGenre" 
@@ -77,24 +84,57 @@
         :value="uniqueGenres.toString()" 
         icon="🏷️" />
     </div>
+
+    <!-- Toast -->
+    <Toast
+      :show="showToast"
+      :message="toastMessage"
+      :type="toastType"
+    />
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useSpotifyStore, type TimeRange } from '../../stores/spotify'
 import TimeRangeSelector from '../common/TimeRangeSelector.vue'
 import StatCard from '../common/StatCard.vue'
+import Toast from '../common/Toast.vue'
 
 const spotify = useSpotifyStore()
+
+// Toast state
+const showToast = ref(false)
+const toastMessage = ref('')
+const toastType = ref<'info' | 'error'>('info')
+
+// Show toast message
+const showToastMessage = (message: string, type: 'info' | 'error' = 'info') => {
+  toastMessage.value = message
+  toastType.value = type
+  showToast.value = true
+  setTimeout(() => {
+    showToast.value = false
+  }, 3000)
+}
+
 const selectedTimeRange = computed({
   get: () => spotify.currentTimeRange.value,
   set: async (newRange: TimeRange) => {
     try {
       await spotify.fetchTopItems('artists', newRange)
     } catch (err) {
-      console.error('Error fetching artists:', err)
+      if (err instanceof Error) {
+        showToastMessage(err.message, 'error')
+      }
     }
+  }
+})
+
+// Watch for errors
+watch(() => spotify.error, (newError) => {
+  if (newError) {
+    showToastMessage(String(newError), 'error')
   }
 })
 
@@ -104,7 +144,9 @@ onMounted(async () => {
     try {
       await spotify.fetchTopItems('artists', selectedTimeRange.value)
     } catch (err) {
-      console.error('Error fetching initial artists:', err)
+      if (err instanceof Error) {
+        showToastMessage(err.message, 'error')
+      }
     }
   }
 })
