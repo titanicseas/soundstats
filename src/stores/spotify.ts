@@ -18,6 +18,9 @@ interface Artist {
   images: { url: string }[]
   popularity: number
   uri: string
+  external_urls: {
+    spotify: string
+  }
 }
 
 interface Track {
@@ -26,15 +29,28 @@ interface Track {
   artists: {
     id: string
     name: string
+    external_urls: {
+      spotify: string
+    }
   }[]
   album: {
     id: string
     name: string
     images: { url: string }[]
+    external_urls: {
+      spotify: string
+    }
+    restrictions: {
+      reason: "market" | "product" | "explicit"
+    }
+  }
+  external_urls: {
+    spotify: string
   }
   duration_ms: number
   popularity: number
   uri: string
+  explicit: boolean
 }
 
 interface RecentTrack {
@@ -71,6 +87,9 @@ interface Playlist {
   public: boolean
   collaborative: boolean
   uri: string
+  external_urls: {
+    spotify: string
+  }
 }
 
 // State
