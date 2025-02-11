@@ -31,12 +31,17 @@
           {{ index + 1 }}
         </div>
 
-        <!-- Album Art -->
-        <div class="w-12 h-12 flex-shrink-0">
+        <!-- Album Art with Link -->
+        <a 
+          :href="tracks[index].album.external_urls.spotify" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          class="w-12 h-12 flex-shrink-0 hover:opacity-80 transition"
+        >
           <img 
-            v-if="track.album.images[0]"
-            :src="track.album.images[0].url" 
-            :alt="track.album.name"
+            v-if="tracks[index].album.images[0]"
+            :src="tracks[index].album.images[0].url" 
+            :alt="tracks[index].album.name"
             class="w-full h-full object-cover rounded"
           />
           <div 
@@ -45,33 +50,62 @@
           >
             <span class="text-2xl">🎵</span>
           </div>
-        </div>
+        </a>
 
         <!-- Track Info -->
         <div class="flex-1 min-w-0">
-          <h3 class="font-medium truncate dark:text-white">{{ track.name }}</h3>
+          <a 
+            :href="tracks[index].external_urls.spotify" 
+            target="_blank"
+            rel="noopener noreferrer"
+            class="hover:underline"
+          >
+            <h3 class="font-medium truncate dark:text-white">{{ tracks[index].name }}</h3>
+          </a>
           <div class="flex items-center text-sm text-neutral-500 dark:text-neutral-400">
-            <p class="truncate">{{ track.artists.map(artist => artist.name).join(', ') }}</p>
+            <p class="truncate">
+              <template v-for="(artist, idx) in tracks[index].artists" :key="artist.id">
+                <a 
+                  :href="artist.external_urls.spotify"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="hover:underline"
+                >{{ artist.name }}</a><span v-if="idx < tracks[index].artists.length - 1">, </span>
+              </template>
+            </p>
             <span class="mx-2">•</span>
-            <p class="truncate">{{ track.album.name }}</p>
+            <a 
+              :href="tracks[index].album.external_urls.spotify"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="truncate hover:underline"
+            >
+              {{ tracks[index].album.name }}
+            </a>
           </div>
           <!-- Popularity Bar -->
-          <div class="mt-1.5 flex items-center space-x-2">
+          <div class="mt-1.5 flex items-center space-x-2 group relative">
             <div class="flex-1 h-1 bg-neutral-100 dark:bg-neutral-700 rounded-full overflow-hidden">
               <div 
                 class="h-full bg-green-500 rounded-full"
-                :style="{ width: track.popularity + '%' }"
+                :style="{ width: tracks[index].popularity + '%' }"
               ></div>
             </div>
             <span class="text-xs text-neutral-500 dark:text-neutral-400 min-w-[2.5rem] text-right">
-              {{ track.popularity }}%
+              {{ tracks[index].popularity }}%
             </span>
+            <!-- Tooltip -->
+            <div class="absolute -top-8 left-0 w-full opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+              <div class="bg-neutral-800 dark:bg-white text-white dark:text-neutral-800 text-xs rounded px-2 py-1 text-center">
+                Spotify popularity score
+              </div>
+            </div>
           </div>
         </div>
 
         <!-- Duration -->
         <div class="text-sm text-neutral-500 dark:text-neutral-400 min-w-[4rem] text-right">
-          {{ formatDuration(track.duration_ms) }}
+          {{ formatDuration(tracks[index].duration_ms) }}
         </div>
       </div>
     </div>
