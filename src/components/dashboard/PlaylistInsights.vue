@@ -44,11 +44,15 @@
 
           <!-- Playlist Info -->
           <div class="flex-1 min-w-0">
-            <h3 class="font-medium truncate dark:text-white">{{ playlist.name }}</h3>
+            <a 
+              :href="playlist.external_urls.spotify" 
+              target="_blank"
+              rel="noopener noreferrer"
+              class="hover:underline"
+            >
+              <h3 class="font-medium truncate dark:text-white">{{ playlist.name }}</h3>
+            </a>
             <p class="text-sm text-neutral-500 dark:text-neutral-400 truncate">
-              By {{ playlist.owner.display_name }}
-            </p>
-            <p class="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
               {{ playlist.tracks.total }} tracks
             </p>
           </div>
