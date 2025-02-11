@@ -101,6 +101,14 @@ const userPlaylists = ref<Playlist[]>([])
 const currentTimeRange = ref<TimeRange>('medium_term')
 const previousTimeRange = ref<TimeRange>('medium_term')
 
+// Track if we've attempted to fetch data for new accounts
+const hasAttemptedFetch = ref({
+  artists: false,
+  tracks: false,
+  recent: false,
+  playlists: false
+})
+
 const isLoading = ref<LoadingState>({
   profile: false,
   artists: false,
@@ -159,8 +167,8 @@ export function useSpotifyStore() {
   const fetchTopItems = async (type: 'artists' | 'tracks', timeRange: TimeRange = currentTimeRange.value) => {
     const loadingKey = type === 'artists' ? 'artists' : 'tracks'
     
-    // Don't fetch if we're already loading
-    if (isLoading.value[loadingKey]) return
+    // Only prevent fetching if we're already loading or if it's the same timeRange we've already attempted
+    if (isLoading.value[loadingKey] || (hasAttemptedFetch.value[loadingKey] && timeRange === currentTimeRange.value)) return
     
     isLoading.value[loadingKey] = true
     error.value = null
@@ -169,28 +177,46 @@ export function useSpotifyStore() {
     try {
       const data = await fetchFromSpotify('/me/top/' + type + '?time_range=' + timeRange + '&limit=15')
       
-      // Check if the response is empty
-      if (!data.items || data.items.length === 0) {
-        // Revert to previous time range
-        currentTimeRange.value = previousTimeRange.value
-        throw new Error(`No ${type} data available for this time range`)
-      }
+      // Only update data if time range is different or we don't have data yet
+      const shouldUpdateData = timeRange !== currentTimeRange.value || 
+        (type === 'artists' ? topArtists.value.length === 0 : topTracks.value.length === 0)
 
-      if (type === 'artists') {
-        topArtists.value = data.items
-      } else {
-        topTracks.value = data.items
+      if (shouldUpdateData) {
+        // Handle empty response without throwing error
+        if (!data.items || data.items.length === 0) {
+          if (type === 'artists') {
+            topArtists.value = []
+          } else {
+            topTracks.value = []
+          }
+          // Only revert time range if we were changing it and got no data
+          if (timeRange !== previousTimeRange.value) {
+            currentTimeRange.value = previousTimeRange.value
+          }
+        } else {
+          if (type === 'artists') {
+            topArtists.value = data.items
+          } else {
+            topTracks.value = data.items
+          }
+          currentTimeRange.value = timeRange
+        }
       }
-      currentTimeRange.value = timeRange
+      
+      // Mark as attempted for this time range
+      hasAttemptedFetch.value[loadingKey] = true
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'An error occurred'
       console.error('Error fetching top ' + type + ':', err)
       
-      // Reset data for this type
-      if (type === 'artists') {
-        topArtists.value = []
-      } else {
-        topTracks.value = []
+      // Reset data for this type only if we were going to update it
+      if (timeRange !== currentTimeRange.value || 
+          (type === 'artists' ? topArtists.value.length === 0 : topTracks.value.length === 0)) {
+        if (type === 'artists') {
+          topArtists.value = []
+        } else {
+          topTracks.value = []
+        }
       }
     } finally {
       isLoading.value[loadingKey] = false
@@ -199,15 +225,20 @@ export function useSpotifyStore() {
 
   // Fetch recently played tracks
   const fetchRecentlyPlayed = async (limit: number = 15) => {
+    // Don't fetch if we're already loading or have already attempted for new accounts
+    if (isLoading.value.recent || hasAttemptedFetch.value.recent) return
+
     isLoading.value.recent = true
     error.value = null
 
     try {
       const data = await fetchFromSpotify('/me/player/recently-played?limit=' + limit)
-      recentTracks.value = data.items
+      recentTracks.value = data.items || []
+      hasAttemptedFetch.value.recent = true
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'An error occurred'
       console.error('Error fetching recently played tracks:', err)
+      recentTracks.value = []
     } finally {
       isLoading.value.recent = false
     }
@@ -215,17 +246,32 @@ export function useSpotifyStore() {
 
   // Fetch user playlists
   const fetchUserPlaylists = async (limit: number = 20, offset: number = 0) => {
+    // Don't fetch if we're already loading or have already attempted for new accounts
+    if (isLoading.value.playlists || hasAttemptedFetch.value.playlists) return
+
     isLoading.value.playlists = true
     error.value = null
 
     try {
       const data = await fetchFromSpotify('/me/playlists?limit=' + limit + '&offset=' + offset)
-      userPlaylists.value = data.items
+      userPlaylists.value = data.items || []
+      hasAttemptedFetch.value.playlists = true
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'An error occurred'
       console.error('Error fetching user playlists:', err)
+      userPlaylists.value = []
     } finally {
       isLoading.value.playlists = false
+    }
+  }
+
+  // Reset fetch attempts (useful for manual refresh)
+  const resetFetchAttempts = () => {
+    hasAttemptedFetch.value = {
+      artists: false,
+      tracks: false,
+      recent: false,
+      playlists: false
     }
   }
 
@@ -237,6 +283,7 @@ export function useSpotifyStore() {
     recentTracks.value = []
     userPlaylists.value = []
     error.value = null
+    resetFetchAttempts()
   }
 
   return {
@@ -250,12 +297,14 @@ export function useSpotifyStore() {
     error,
     currentTimeRange,
     previousTimeRange,
+    hasAttemptedFetch,
 
     // Actions
     fetchUserProfile,
     fetchTopItems,
     fetchRecentlyPlayed,
     fetchUserPlaylists,
-    clearData
+    clearData,
+    resetFetchAttempts
   }
 } 
