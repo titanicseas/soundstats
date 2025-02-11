@@ -31,8 +31,13 @@
           {{ index + 1 }}
         </div>
 
-        <!-- Artist Image -->
-        <div class="w-16 h-16 flex-shrink-0">
+        <!-- Artist Image with Link -->
+        <a 
+          :href="artist.external_urls.spotify" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          class="w-16 h-16 flex-shrink-0 hover:opacity-80 transition"
+        >
           <img 
             v-if="artist.images[0]"
             :src="artist.images[0].url" 
@@ -45,16 +50,23 @@
           >
             <span class="text-2xl">👤</span>
           </div>
-        </div>
+        </a>
 
         <!-- Artist info -->
         <div class="flex-1 min-w-0">
-          <h3 class="font-medium truncate dark:text-white">{{ artist.name }}</h3>
+          <a 
+            :href="artist.external_urls.spotify" 
+            target="_blank"
+            rel="noopener noreferrer"
+            class="hover:underline"
+          >
+            <h3 class="font-medium truncate dark:text-white">{{ artist.name }}</h3>
+          </a>
           <p class="text-sm text-neutral-500 dark:text-neutral-400 truncate">
             {{ artist.genres.slice(0, 2).join(', ') }}
           </p>
           <!-- Popularity Bar -->
-          <div class="mt-2 flex items-center space-x-2">
+          <div class="mt-2 flex items-center space-x-2 group relative">
             <div class="flex-1 h-1.5 bg-neutral-100 dark:bg-neutral-700 rounded-full overflow-hidden">
               <div 
                 class="h-full bg-green-500 rounded-full"
@@ -64,6 +76,12 @@
             <span class="text-xs text-neutral-500 dark:text-neutral-400 min-w-[2.5rem] text-right">
               {{ artist.popularity }}%
             </span>
+            <!-- Tooltip -->
+            <div class="absolute -top-8 left-0 w-full opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+              <div class="bg-neutral-800 dark:bg-white text-white dark:text-neutral-800 text-xs rounded px-2 py-1 text-center">
+                Spotify popularity score
+              </div>
+            </div>
           </div>
         </div>
       </div>
