@@ -27,12 +27,15 @@
         <PlaylistInsights />
       </template>
     </main>
+
+    <Footer />
   </div>
 </template>
 
 <script setup lang="ts">
 import { onMounted, computed, ref } from 'vue'
 import Header from '../layout/Header.vue'
+import Footer from '../layout/Footer.vue'
 import TopTracks from './TopTracks.vue'
 import TopArtists from './TopArtists.vue'
 import RecentlyPlayed from './RecentlyPlayed.vue'
