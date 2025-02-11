@@ -35,9 +35,23 @@
 
         <!-- Track Info -->
         <div class="flex-1 min-w-0">
-          <h3 class="font-medium truncate dark:text-white">{{ item.track.name }}</h3>
+          <a 
+            :href="item.track.external_urls.spotify" 
+            target="_blank"
+            rel="noopener noreferrer"
+            class="hover:underline"
+          >
+            <h3 class="font-medium truncate dark:text-white">{{ item.track.name }}</h3>
+          </a>
           <p class="text-sm text-neutral-500 dark:text-neutral-400 truncate">
-            {{ item.track.artists.map(artist => artist.name).join(', ') }}
+            <template v-for="(artist, idx) in item.track.artists" :key="artist.id">
+              <a 
+                :href="artist.external_urls.spotify"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="hover:underline"
+              >{{ artist.name }}</a><span v-if="idx < item.track.artists.length - 1">, </span>
+            </template>
           </p>
         </div>
 
