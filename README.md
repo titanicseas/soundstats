@@ -75,4 +75,4 @@ This application uses the Spotify Web API for fetching music data. All music dat
 
 ## License
 
-[MIT License](LICENSE)
+MIT License
