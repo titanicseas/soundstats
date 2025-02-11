@@ -80,6 +80,7 @@ const topTracks = ref<Track[]>([])
 const recentTracks = ref<RecentTrack[]>([])
 const userPlaylists = ref<Playlist[]>([])
 const currentTimeRange = ref<TimeRange>('medium_term')
+const previousTimeRange = ref<TimeRange>('medium_term')
 
 const isLoading = ref<LoadingState>({
   profile: false,
@@ -106,11 +107,18 @@ export function useSpotifyStore() {
       }
     })
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch from Spotify API')
+    // Handle both 200 OK and 304 Not Modified as success cases
+    if (response.ok || response.status === 304) {
+      const data = await response.json()
+      return data
     }
 
-    return response.json()
+    // Handle specific error cases
+    if (response.status === 429) {
+      throw new Error('Rate limit exceeded. Please try again later.')
+    }
+
+    throw new Error('Failed to fetch from Spotify API')
   }
 
   // Fetch user profile
@@ -130,18 +138,25 @@ export function useSpotifyStore() {
 
   // Fetch top items (artists or tracks)
   const fetchTopItems = async (type: 'artists' | 'tracks', timeRange: TimeRange = currentTimeRange.value) => {
-    // Only skip if we have data AND the time range hasn't changed
-    const hasData = type === 'artists' 
-      ? topArtists.value.length > 0 
-      : topTracks.value.length > 0
-    if (timeRange === currentTimeRange.value && hasData) return
-
     const loadingKey = type === 'artists' ? 'artists' : 'tracks'
+    
+    // Don't fetch if we're already loading
+    if (isLoading.value[loadingKey]) return
+    
     isLoading.value[loadingKey] = true
     error.value = null
+    previousTimeRange.value = currentTimeRange.value
 
     try {
       const data = await fetchFromSpotify('/me/top/' + type + '?time_range=' + timeRange + '&limit=15')
+      
+      // Check if the response is empty
+      if (!data.items || data.items.length === 0) {
+        // Revert to previous time range
+        currentTimeRange.value = previousTimeRange.value
+        throw new Error(`No ${type} data available for this time range`)
+      }
+
       if (type === 'artists') {
         topArtists.value = data.items
       } else {
@@ -151,6 +166,13 @@ export function useSpotifyStore() {
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'An error occurred'
       console.error('Error fetching top ' + type + ':', err)
+      
+      // Reset data for this type
+      if (type === 'artists') {
+        topArtists.value = []
+      } else {
+        topTracks.value = []
+      }
     } finally {
       isLoading.value[loadingKey] = false
     }
@@ -208,6 +230,7 @@ export function useSpotifyStore() {
     isLoading,
     error,
     currentTimeRange,
+    previousTimeRange,
 
     // Actions
     fetchUserProfile,
